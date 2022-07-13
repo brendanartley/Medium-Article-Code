@@ -3,8 +3,50 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
 
+def generate_clusters(n_samples, n_clusters):
+    X, y_true = make_blobs(n_samples=n_samples, centers=n_clusters, cluster_std=0.60, random_state=0)
+    plt.figure(figsize=(10, 6))
+    plt.scatter(X[:, 0], X[:, 1], s=50)
+    plt.title("Data Points")
+    plt.show(block=False)
+    plt.pause(2)
+    plt.close()
+    return X, y_true
+
 def euclidian_distance(p1, p2):
     return sum([(x-y)**2 for x,y in zip(p1, p2)])**(1/2)
+
+def initilize_clusters(init_method, X, n_clusters):
+    # Initializes clusters based on init_method.
+    # init_method options : 'k++', 'random'
+    centroid_dict = {}
+
+    # K-means ++ Initialization
+    if init_method == 'k++':
+        centroid_dict[0] = X[np.random.randint(len(X)), :]
+
+        for c in range(1, n_clusters):
+            dists = []
+            for point in X:
+                min_dist = np.inf
+
+                for i in range(len(centroid_dict.keys())):
+                    current_dist = euclidian_distance(point, centroid_dict[i])
+                    min_dist = min(min_dist, current_dist)
+                dists.append(min_dist)
+            centroid_dict[c] = X[np.argmax(dists), :]
+    # Random Initialization
+    elif init_method == 'random':
+        init_centroids = np.random.choice(range(n_samples), size=n_clusters, replace=False)
+        for i, c in zip(range(n_clusters), init_centroids):
+            centroid_dict[i] = X[c]
+
+    #  Dict to keep track of points in each cluster
+    cluster_dict = {}
+    for i in range(n_clusters):
+        cluster_dict[i] = []
+
+    return centroid_dict, cluster_dict
 
 def update_centroids(centroid_dict, cluster_dict, X):
     X_dim = len(X[0])
@@ -14,7 +56,8 @@ def update_centroids(centroid_dict, cluster_dict, X):
 
         if len(cluster_xs)!=0:
             new_cluster = np.mean(cluster_xs, axis=0)
-
+        else:
+            continue
         centroid_dict[key] = new_cluster
     return centroid_dict, cluster_dict
 
@@ -51,18 +94,22 @@ def train(centroid_dict, cluster_dict, X, epochs):
             centroid_dict, cluster_dict = update_clusters(centroid_dict, cluster_dict, X, initial=True)
             continue
 
+        plot_results(centroid_dict, cluster_dict, X, epoch)
+
         last_centroid_dict = centroid_dict.copy()
         
         centroid_dict, cluster_dict = update_centroids(centroid_dict, cluster_dict, X)
         centroid_dict, cluster_dict = update_clusters(centroid_dict, cluster_dict, X)
 
         if check_dicts_identical(centroid_dict, last_centroid_dict):
+            plot_results(centroid_dict, cluster_dict, X, epoch, last=True)
             return centroid_dict, cluster_dict, epoch
 
         last_centroid_dict = centroid_dict.copy()
+
     return centroid_dict, cluster_dict, epoch
 
-def plot_results(centroid_dict, cluster_dict, X, epoch):
+def plot_results(centroid_dict, cluster_dict, X, epoch, last=False):
     nrows=1
     ncols=1
     fig, ax = plt.subplots(figsize=(10, 6), nrows=nrows, ncols=ncols)
@@ -71,36 +118,27 @@ def plot_results(centroid_dict, cluster_dict, X, epoch):
     ax1.scatter(X[:, 0], X[:, 1], c='tab:blue')
     for k in centroid_dict.keys():
         ax1.scatter(centroid_dict[k][0], centroid_dict[k][1], c='red', s=100)
-    ax1.set_title("K-Means Clustering - Converged on Epoch: {}".format(epoch))
-    plt.show()
+    if last:
+        ax1.set_title("K-Means (Converged) - Epoch: {}".format(epoch))
+        plt.show()
+    else:
+        ax1.set_title("K-Means (Training) - Epoch : {}".format(epoch))
+        plt.show(block=False)
+        plt.pause(1)
+        plt.close()
 
 def numpy_implementation():
 
     n_clusters = 4
     n_samples = 300
     epochs = 100
-    X, y_true = make_blobs(n_samples=n_samples, centers=n_clusters, cluster_std=0.60, random_state=0)
-    plt.figure(figsize=(10, 6))
-    plt.scatter(X[:, 0], X[:, 1], s=50)
-    plt.title("Data Points")
-    plt.show()
+    X, y_true = generate_clusters(n_samples, n_clusters)
 
-    # --- Initializing Centroids as Random Points from Data --- 
-    init_centroids = np.random.choice(range(n_samples), size=n_clusters, replace=False)
+    # --- Initializing dicts to store centroids + cluster members ---
+    centroid_dict, cluster_dict = initilize_clusters('k++', X, n_clusters)
 
-    centroid_dict = {}
-    for i, c in zip(range(n_clusters), init_centroids):
-        centroid_dict[i] = X[c]
-
-    cluster_dict = {}
-    for i in range(n_clusters):
-        cluster_dict[i] = []
-
-    # --- Training--- 
+    # --- Training Model --- 
     centroid_dict, cluster_dict, epoch = train(centroid_dict, cluster_dict, X, epochs)
-
-    # --- Plotting Results --- 
-    plot_results(centroid_dict, cluster_dict, X, epoch)
 
 def scikitlearn_implementation():
     n_clusters = 4
