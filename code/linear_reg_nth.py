@@ -45,11 +45,9 @@ def main():
             plt.ylim([0, 1.2])
             plt.title("Epoch {}/{}, Error: {}".format(i, epochs, error))
             if i == 1000:
-                plt.savefig('./imgs/{}.png'.format(i))
                 plt.show()
             else:
                 plt.show(block=False)
-                plt.savefig('./imgs/{}.png'.format(i))
                 plt.pause(0.2)
                 plt.close()
 

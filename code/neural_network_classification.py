@@ -90,10 +90,12 @@ def plot_model_predictions(model, X, y, epoch, last=False):
     if last:
         ax1.scatter(X[y!=preds][:, 0], X[y!=preds][:, 1], c='tab:red', s=25, label="Errors")
         ax1.legend(loc='upper right')
+        plt.savefig('./imgs/{}.png'.format(epoch))
         plt.show()
     else:
         ax1.legend(loc='upper right')
         plt.show(block=False)
+        plt.savefig('./imgs/{}.png'.format(epoch))
         plt.pause(0.001)
         plt.close()
     return
